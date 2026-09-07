@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Environment and local tokens
+.env
+.env.*
+*.local
+
+# Logs and runtime artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor and OS metadata
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Local visual verification and temporary files
+*.png
+*.jpg
+*.jpeg
+*.webp
+tmp/
+temp/
+coverage/
+.nyc_output/

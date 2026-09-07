@@ -1,0 +1,11 @@
+services:
+  xiangqi-go:
+    build: .
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 5173
