@@ -31,7 +31,31 @@ ehthumbs.db
 *.jpg
 *.jpeg
 *.webp
+*-qa.md
 tmp/
 temp/
 coverage/
 .nyc_output/
+
+# User store
+users.json
+users.*.json
+
+# Atomic user-store writes and container runtime data
+users*.json.tmp
+data/
+
+# SQLite databases
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+
+# Backups
+users*.bak*
+*.bak
+*.bak.*

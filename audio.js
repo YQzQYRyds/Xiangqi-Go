@@ -5,7 +5,7 @@ export class GameAudio {
   async unlock(){
     const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;
     if(!this.ctx){this.ctx=new Audio();this.music=this.ctx.createGain();this.music.gain.value=this.volume*.36;this.music.connect(this.ctx.destination);this.fx=this.ctx.createGain();this.fx.gain.value=.32;this.fx.connect(this.ctx.destination);}
-    try{await this.ctx.resume();if(this.musicOn&&!this.timer)this.start();}catch{}
+    try{await this.ctx.resume();if(this.ctx.state==='running'&&this.musicOn&&!this.timer)this.start();}catch{}
   }
   tone(freq,time,duration,gain,bus,type='sine'){
     const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type;o.frequency.value=freq;

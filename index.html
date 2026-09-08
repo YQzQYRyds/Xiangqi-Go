@@ -1,19 +1,205 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#182b27"><title>弈界 · 象棋与围棋</title><link rel="stylesheet" href="style.css"></head>
-<body><header><a class="brand" href="./"><span class="seal">弈</span><span>弈界<small>XIANGQI × GO</small></span></a><span class="header-note">一盘山河，两种谋略</span><button id="enterLobby" class="quiet">联机大厅</button><button id="rules" class="quiet">玩法说明 ↗</button></header>
-<main><section class="intro"><div><div class="eyebrow">A NEW WAY TO PLAY</div><h1>纵横之间，<em>另有天地。</em></h1><p>以象棋行兵，以围棋成势。落下一子，改写一局。</p></div><span class="edition">象 × 围<br><small>融合棋 · 初版</small></span></section>
-<section id="lobby" class="lobby-shell">
-<div class="lobby-heading"><div><div class="eyebrow">MEET ACROSS THE BOARD</div><h2>会友弈厅</h2><p>两人入座，准备开局。红黑随机，红方先行。</p></div><button id="localPlay" class="outline-button">本地练习 ↗</button></div>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#182b27"><title>围之象棋 · 象棋与围棋</title><link rel="stylesheet" href="style.css"></head>
+<body><header><a class="brand" id="homeBrand" href="#menu"><span class="seal">弈</span><span>围之象棋<small>XIANGQI × GO</small></span></a><span class="header-note">一盘山河，两种谋略</span><button id="rules" class="quiet">玩法说明 ↗</button><button id="userBadge" class="user-badge" aria-label="个人资料" hidden><span id="headerAvatar" class="avatar-seal">客</span><span id="headerUsername">访客</span></button><button id="authBtn" class="quiet auth-btn">登录 / 注册</button></header>
+<main><section id="mainMenu"><section class="intro"><div><div class="eyebrow">A NEW WAY TO PLAY</div><h1>纵横之间，<em>另有天地。</em></h1><p>以象棋行兵，以围棋成势。落下一子，改写一局。</p></div><span class="edition">象 × 围<br><small>融合棋 · 初版</small></span></section>
+<div class="menu-choices"><button id="enterLobby" class="mode-card"><span class="eyebrow">PLAY ONLINE</span><strong>联机对战</strong><span>与棋友入座，隔屏共弈一局。</span><b>进入联机大厅 →</b></button><button id="localPlay" class="mode-card practice-card"><span class="eyebrow">PRACTICE & LEARN</span><strong>单机练习</strong><span>自选红黑，磨炼你的行棋与布局。</span><b>设置练习对局 →</b></button></div><p class="menu-foot">象棋行兵 · 围棋成势 · 一局两种谋略</p></section>
+
+<section id="profilePage" class="profile-shell" hidden>
+<div class="profile-top-nav">
+<button id="profileBackHome" class="back-home-button" type="button">← 返回主菜单</button>
+</div>
+<div class="profile-header">
+<div><div class="eyebrow">PLAYER PROFILE</div><h2>个人资料</h2></div>
+<div class="profile-header-actions">
+<button id="adminPanelEntrance" class="admin-entrance-btn" hidden>🛡 管理员面板</button>
+<button id="openProfileSettings" class="outline-button">⚙ 设置 / 修改资料</button>
+</div>
+</div>
+<div id="profileBanBanner" class="event-banner warning" hidden style="margin-bottom:20px"></div>
+<div class="profile-card">
+<div class="profile-avatar-wrap"><span id="profileAvatar" class="avatar-seal-lg">客</span></div>
+<div class="profile-info">
+<div class="profile-title-row">
+<h3 id="profileUsername">--</h3>
+<span id="profileTypeTag" class="tag">--</span>
+<span id="profileRoleTag" class="tag admin-tag" hidden>管理员</span>
+<span id="profileStatusTag" class="tag status-tag">正常</span>
+</div>
+<div class="profile-id-row"><span class="label">玩家 ID：</span><code id="profileUserId" class="user-id">--</code><button id="copyUserIdBtn" class="quiet chip">复制</button></div>
+<div class="profile-meta-grid">
+<div class="meta-item"><span class="label">账号类型</span><strong id="profileTypeDesc">--</strong></div>
+<div class="meta-item"><span class="label">注册 / 创建时间</span><strong id="profileCreatedAt">--</strong></div>
+<div class="meta-item"><span class="label">最近登录</span><strong id="profileLastLogin">--</strong></div>
+<div class="meta-item"><span class="label">系统权限</span><strong id="profileRoleDesc">--</strong></div>
+</div>
+</div>
+</div>
+<div class="profile-footer">
+<button id="profileLogoutBtn" class="danger-outline-button">退出当前登录 / 切换账号</button>
+</div>
+</section>
+
+<section id="lobby" class="lobby-shell" hidden>
+<div class="lobby-top-nav">
+<button id="lobbyBackHome" class="back-home-button" type="button">← 返回主菜单</button>
+</div>
+<div class="lobby-heading"><div><div class="eyebrow">MEET ACROSS THE BOARD</div><h2>会友弈厅</h2><p>两人入座，准备开局。红黑随机，红方先行。</p></div><button id="returnGame" class="outline-button" hidden>返回棋盘 →</button></div>
 <div class="lobby-identity"><span id="playerName">正在领取棋名…</span><span id="connectionStatus" role="status">正在连接…</span></div>
 <div id="lobbyError" class="event-banner warning" role="alert" hidden></div>
 <div id="roomListArea"><div class="rooms-heading"><span>棋室 <small id="roomCapacity">0 / 5</small></span><button id="createRoom" class="primary-button" disabled>＋ 创建房间</button></div><div id="roomList" class="room-grid"></div><p class="lobby-note">每间限 2 人 · 名称随机生成 · 空房自动销毁</p></div>
 <div id="roomPanel" hidden><div class="rooms-heading"><div><h2 id="roomName"></h2><p id="roomPhase"></p></div><button id="leaveRoom" class="outline-button">退出房间</button></div><div id="seats" class="seats"></div><div class="room-actions"><button id="readyRoom" class="primary-button">准备</button><span id="roomHelp"></span></div></div>
 </section>
-<div class="layout" id="gameLayout"><section class="arena"><div class="board-top"><span><i class="dot black"></i> 黑方 · 黑子 <small id="blackType">人机</small></span><span id="round">第 1 回合</span></div><div class="board-frame"><svg id="board" viewBox="0 0 620 690" role="group" aria-label="象围棋棋盘"></svg></div><div class="board-bottom"><span><i class="dot red"></i> 红方 · 白子 <small>先手</small></span><span class="legend">实线相连 · 共享气息</span></div></section>
-<aside><section class="panel turn-panel"><div class="eyebrow">THE NEXT MOVE</div><div class="turn-title"><span id="turnDot" class="turn-token">帥</span><div><h2 id="turn">红方行棋</h2><p id="status">移动象棋，或落下一枚白子。</p></div></div><div class="interaction-guide">点棋走子 <span>·</span> 空位落子</div><div id="event" class="event-banner" role="status" aria-live="polite" hidden></div><div id="hint" class="hint" aria-live="polite">点选己方象棋行棋，或直接点击空位落围棋。</div><div id="selection" class="selection">点击棋子可查看所在棋块的气</div></section>
-<section class="panel"><div class="panel-label">对局设置 <span>GAME MODE</span></div><div class="tabs mode-tabs"><button id="pve" class="active">人机 PVE</button><button id="pvp">双人 PVP</button></div><label class="difficulty">对手难度<select id="level"><option value="easy">入门 · 战术防守</option><option value="normal" selected>标准 · 多层推演</option><option value="hard">进阶 · 深度搜索</option></select></label><div class="controls"><button id="undo">↶ 悔棋</button><button id="restart">重新开局</button></div><p class="setting-note">双人模式支持同屏轮流对弈</p></section>
-<section class="panel sound-panel"><div class="panel-label">山水清音 <span>原创合成 · 五声音阶</span></div><div class="controls"><button id="music" aria-pressed="true">♫ 配乐开启</button><button id="effects" aria-pressed="true">♪ 音效开启</button></div><label class="volume">配乐音量<input id="volume" aria-label="配乐音量" type="range" min="0" max="100" value="30"></label><p class="setting-note">首次点击后播放 · 拨弦与笛音</p></section><section class="panel records"><div class="panel-label">落子成章 <span id="count">0 手</span></div><div id="history" aria-live="polite"><div class="empty"><span>弈</span><p>棋局未启，万象待生。</p></div></div></section>
-<div class="tip"><span>弈 理</span><p>一枚围棋子，既能续气，也能别马脚、架炮台。留意每一块棋的呼吸。</p></div></aside></div><footer><span>弈界 / XIANGQI–GO</span><span>行棋有法，布局无界。</span></footer></main>
-<dialog id="rulesDialog"><button class="close" id="closeRules" aria-label="关闭">×</button><div class="eyebrow">HOW TO PLAY</div><h2>一盘棋，两种智慧。</h2><p>使用 9 × 10 象棋棋盘，按传统象棋布局，红方先行。每回合选择移动一枚象棋，或在空交叉点放一枚己方围棋。</p><ol><li><strong>阵营与气</strong>：红方与白子为一方，象棋外圈为白色；黑方与黑子为一方，象棋外圈为黑色。上下左右紧邻的己方棋子组成棋块，共享相邻空交叉点作为“气”。斜向不连接，河两岸相邻交叉点照常连接。</li><li><strong>走棋与吃子</strong>：遵守象棋走法、九宫、象不过河、兵卒过河、蹩马腿、塞象眼及炮隔一子吃子的规则。双方的象棋、围棋都可作炮架；炮吃子时须与目标同行或同列，中间恰好隔一枚棋子。围棋可阻挡，也能被象棋直接吃掉。围棋落下后不能移动。未选中象棋时点击空位落围棋；选中象棋后点击合法点走棋，点击非法点取消选择。</li><li><strong>提子顺序</strong>：先完成移动或落子与直接吃子，再同时移除所有对方无气棋块。若已捕获对方将帅，立即获胜；否则若己方有无气棋块，则该步为自杀禁手。不得重复本局任何已出现的棋盘局面。</li><li><strong>获胜</strong>：直接吃掉或围死对方将帅即胜。采用捕获将帅制，不设“被将军必须应将”的限制；将帅照面时可以飞将吃对方。无合法行动判负。</li><li><strong>对局模式</strong>：联机大厅最多 5 个房间，每间 2 人。双方准备后随机分配红黑方；断线保留座位 30 秒，期间暂停，超时或主动退出判负。结束后双方可再次准备。PVP 为本机同屏双人；PVE 中你执红，电脑执黑。电脑优先捕获将帅、处理一步败局，再按难度限时多层搜索。将军提示同时涵盖直接吃将和围死将帅的威胁，但不强制应将。切换模式会重新开始。</li></ol><p class="rule-foot">这是融合规则的明确约定，并非传统象棋或围棋的完整竞赛规则。</p></dialog>
+<div id="gamePage" hidden>
+<div class="game-heading"><h2 id="gameTitle">练习对局</h2><div><button id="gameOptions" class="outline-button">对局设置</button> <button id="gameBack" class="outline-button">返回主菜单</button></div></div>
+<div class="layout" id="gameLayout">
+<section class="panel match-players" aria-label="双方棋手">
+<div class="match-player"><span id="redAvatar" class="seat-avatar">帥</span><div><strong id="redName">红方</strong><small id="redConnection">本地</small><time id="redClock">10:00</time></div></div>
+<div class="match-turn"><span id="turnDot" class="turn-token">帥</span><h2 id="turn">红方行棋</h2><span id="round">第 1 回合</span></div>
+<div class="match-player black-player"><span id="blackAvatar" class="seat-avatar">將</span><div><strong id="blackName">黑方</strong><small id="blackConnection">本地</small><time id="blackClock">10:00</time></div></div>
+<p id="disconnectCountdown" class="event-banner warning" role="status" hidden></p>
+</section>
+<section class="arena"><div class="board-top"><span id="opponentLabel"></span><span>点棋走子 · 空位落子</span></div><div class="board-frame"><svg id="board" viewBox="0 0 620 690" role="group" aria-label="象围棋棋盘"></svg></div><div class="board-bottom"><span id="selfLabel"></span><span class="legend">实线相连 · 共享气息</span></div></section>
+<div class="match-actions controls"><button id="undo">↶ 悔棋</button><button id="restart">重新开局</button><button id="resign">认输</button><button id="offerDraw">🤝 请求和棋</button></div>
+<section class="panel match-messages"><div class="panel-label">弈间消息 <span id="count">0 手</span></div><div class="message-tabs" aria-label="消息筛选"><button data-filter="all" aria-pressed="true">全部</button><button data-filter="chat" aria-pressed="false">聊天</button><button data-filter="record" aria-pressed="false">对局记录</button><button data-filter="system" aria-pressed="false">系统</button></div><div id="history" role="log" aria-label="对局消息" aria-live="polite"></div><div id="emojiPicker" hidden aria-label="选择表情"></div><form id="chatForm"><button id="emojiToggle" type="button" aria-label="选择表情" aria-expanded="false">表情</button><input id="chatInput" aria-label="聊天消息" maxlength="300" placeholder="与棋友聊一句…" autocomplete="off"><button id="chatSend" class="primary-button" type="submit">发送</button></form><p id="chatNotice" role="status"></p></section>
+<section class="match-hints"><p id="status"></p><div id="event" class="event-banner" role="status" hidden></div><div id="hint" class="hint" aria-live="polite"></div><div id="selection" class="selection"></div></section>
+</div></div>
+<dialog id="gameOptionsDialog"><button id="closeGameOptions" class="close" aria-label="关闭对局设置">×</button><h2>对局设置</h2><div class="panel-label">对局信息 <span id="gameMode"></span></div><p id="gameSettings" class="game-settings"></p><p>每方 10 分钟，时间耗尽判负。联机断线暂停棋钟，等待 30 秒。</p><section class="sound-panel"><div class="panel-label">山水清音 <span>原创合成 · 五声音阶</span></div><div class="controls"><button id="music" aria-pressed="true">♫ 配乐开启</button><button id="effects" aria-pressed="true">♪ 音效开启</button></div><label class="volume">配乐音量<input id="volume" aria-label="配乐音量" type="range" min="0" max="100" value="30"></label></section></dialog>
+<dialog id="resignDialog"><h2>确认认输？</h2><p>本局将结束，对方获胜。</p><div class="controls"><button id="cancelResign">继续对局</button><button id="confirmResign">确认认输</button></div></dialog>
+<dialog id="drawConfirmDialog"><h2>请求和棋？</h2><p>向对方发起和棋请求。若对方同意，本局将以和棋结束（不计入双方胜率）。</p><div class="controls"><button id="cancelDrawConfirm">继续对局</button><button id="confirmDrawOffer" class="primary-button">确认求和</button></div></dialog>
+<dialog id="drawOfferDialog"><h2>对手请求和棋</h2><p><strong id="drawOfferPlayerName">对手</strong> 向您提出了和棋请求。若同意，本局将以和棋结束（不计入双方胜率）。</p><div class="controls"><button id="declineDraw" class="outline-button">拒绝</button><button id="acceptDraw" class="primary-button">同意和棋</button></div></dialog>
+<dialog id="authDialog" class="modal-card">
+<button class="close" id="closeAuth" aria-label="关闭">×</button>
+<div class="eyebrow">CHESS IDENTITY</div>
+<h2>用户通行证</h2>
+<div class="auth-tabs">
+<button id="tabLogin" class="auth-tab active" type="button">密码登录</button>
+<button id="tabRegister" class="auth-tab" type="button">新用户注册</button>
+<button id="tabGuest" class="auth-tab" type="button">游客快捷模式</button>
+</div>
+<div id="authError" class="event-banner warning" hidden></div>
+<form id="loginForm" class="auth-panel">
+<label class="setup-field">用户名<input id="loginUsername" type="text" autocomplete="username" required placeholder="请输入您的用户名"></label>
+<label class="setup-field">密码
+<div class="password-wrap">
+<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="请输入登录密码">
+<button type="button" class="toggle-password" aria-label="显示密码" tabindex="-1">
+<svg class="eye-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+<svg class="eye-off-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+</button>
+</div>
+</label>
+<div class="login-options">
+<label class="checkbox-label"><input type="checkbox" id="autoLogin" checked> 保持登录状态（会话保持）</label>
+</div>
+<button type="submit" class="primary-button full-btn">登 录 →</button>
+</form>
+<form id="registerForm" class="auth-panel" hidden>
+<label class="setup-field">自定义用户名<input id="regUsername" type="text" autocomplete="username" minlength="2" maxlength="16" required placeholder="2-16位自定义昵称"></label>
+<label class="setup-field">设置密码
+<div class="password-wrap">
+<input id="regPassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" required placeholder="至少 6 位登录密码">
+<button type="button" class="toggle-password" aria-label="显示密码" tabindex="-1">
+<svg class="eye-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+<svg class="eye-off-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+</button>
+</div>
+</label>
+<label class="setup-field">确认密码
+<div class="password-wrap">
+<input id="regConfirmPassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" required placeholder="请再次输入密码">
+<button type="button" class="toggle-password" aria-label="显示密码" tabindex="-1">
+<svg class="eye-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+<svg class="eye-off-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+</button>
+</div>
+</label>
+<div class="setup-field">
+<span class="field-title">专属头像（可上传图片或选择印章）</span>
+<div class="avatar-upload-box">
+<div id="regAvatarPreview" class="avatar-seal">弈</div>
+<div class="avatar-upload-ops">
+<label class="upload-btn small-upload">
+<input id="regAvatarFile" type="file" accept="image/*" style="display:none">
+📁 上传自定义头像
+</label>
+</div>
+</div>
+<div id="regAvatarPicker" class="avatar-picker"></div>
+</div>
+<button type="submit" class="primary-button full-btn">立即注册并登录 →</button>
+</form>
+<div id="guestPanel" class="auth-panel" hidden>
+<p class="guest-desc">根据您当前本机的设备凭据自动生成唯一的随机棋名、ID与印章头像。无需设置密码，即开即玩。</p>
+<p class="guest-tip">注：游客账号不可自定义用户名与头像；如需个性化资料，建议选择“新用户注册”。</p>
+<button id="doGuestLogin" type="button" class="primary-button full-btn">以本机游客身份进入 →</button>
+</div>
+</dialog>
+
+<dialog id="profileSettingsDialog" class="modal-card">
+<button class="close" id="closeSettings" aria-label="关闭">×</button>
+<div class="eyebrow">SETTINGS & PREFERENCES</div>
+<h2>修改个人资料</h2>
+<div id="settingsError" class="event-banner warning" hidden></div>
+<div id="settingsGuestNotice" hidden>
+<p class="guest-desc">当前登录为【游客账号】。游客的棋名、ID与头像由本机设备硬件凭据算法生成，不可直接自定义修改。</p>
+<p class="guest-tip">注册正式账号后即可随意设定专属棋名与印章头像：</p>
+<button id="upgradeToRegBtn" type="button" class="primary-button full-btn">前往注册正式账号 →</button>
+</div>
+<form id="settingsForm">
+<label class="setup-field">自定义用户名<input id="editUsername" type="text" minlength="2" maxlength="16" required></label>
+<div class="setup-field">
+<span class="field-title">头像设置（正式玩家支持上传图片）</span>
+<div class="avatar-upload-box">
+<div id="editAvatarPreview" class="avatar-seal-lg">相</div>
+<div class="avatar-upload-ops">
+<label class="upload-btn">
+<input id="editAvatarFile" type="file" accept="image/*" style="display:none">
+📁 上传自定义图片头像
+</label>
+<span class="upload-tip">支持 JPG、PNG、WebP 等图片格式</span>
+</div>
+</div>
+<span class="field-subtitle">或选用经典书法印章：</span>
+<div id="editAvatarPicker" class="avatar-picker"></div>
+</div>
+<button type="submit" class="primary-button full-btn">保存资料修改</button>
+<hr class="form-divider">
+<div class="account-lifecycle">
+<button type="button" id="exportDataBtn" class="secondary-button full-btn">📁 导出个人档案与对局记录</button>
+<button type="button" id="deleteAccountBtn" class="danger-button full-btn">⚠ 注销当前账号</button>
+</div>
+</form>
+</dialog>
+
+<dialog id="upgradeGuestDialog" class="modal-card">
+<button class="close" id="closeUpgradeGuest" aria-label="关闭">×</button>
+<div class="eyebrow">UPGRADE ACCOUNT</div>
+<h2>游客升级为正式账号</h2>
+<p class="guest-desc">升级后将保留您现有的对局记录和胜率，并支持自定义用户名与登录密码。</p>
+<div id="upgradeError" class="event-banner warning" hidden></div>
+<form id="upgradeGuestForm">
+<label class="setup-field">自定义用户名<input id="upgradeUsername" type="text" autocomplete="username" minlength="2" maxlength="16" required placeholder="2-16位用户名"></label>
+<label class="setup-field">设置密码<input id="upgradePassword" type="password" autocomplete="new-password" minlength="6" maxlength="128" required placeholder="至少 6 位登录密码"></label>
+<button type="submit" class="primary-button full-btn">立即升级 →</button>
+</form>
+</dialog>
+
+<dialog id="deleteConfirmDialog" class="modal-card">
+<button class="close" id="closeDeleteConfirm" aria-label="关闭">×</button>
+<div class="eyebrow">DANGER ZONE</div>
+<h2>确认注销账号</h2>
+<p class="guest-desc">注销后您的账号凭据与个人资料将被永久删除，您的历史对局将被匿名化保留以维护对手记录完整。此操作不可逆！</p>
+<div id="deleteAccountError" class="event-banner warning" hidden></div>
+<form id="deleteAccountForm">
+<label class="setup-field">请输入当前登录密码以确认注销<input id="deleteAccountPassword" type="password" autocomplete="current-password" required placeholder="当前账号密码"></label>
+<button type="submit" class="danger-button full-btn">确认注销并删除个人数据</button>
+</form>
+</dialog>
+
+
+
+<footer><span>围之象棋 / XIANGQI–GO</span><span>行棋有法，布局无界。</span></footer></main>
+<dialog id="practiceDialog" aria-labelledby="practiceTitle"><button class="close" id="closePractice" aria-label="关闭练习设置">×</button><div class="eyebrow">YOUR NEXT GAME</div><h2 id="practiceTitle">落子之前</h2><p>选择阵营与对手，按自己的节奏练习。</p><form id="practiceForm"><label class="setup-field">练习方式<select id="practiceMode"><option value="pve">人机对弈</option><option value="pvp">同屏双人</option></select></label><label class="setup-field">你的阵营<select id="playerSide"><option value="r">红方 · 白子 · 先手</option><option value="b">黑方 · 黑子 · 后手</option></select></label><label class="setup-field" id="difficultyField">人机难度<select id="level"><option value="easy">入门 · 战术防守</option><option value="normal" selected>标准 · 多层推演</option><option value="hard">进阶 · 深度搜索</option></select></label><p id="practiceNote">己方在棋盘下方；选择黑方时，电脑执红先行。</p><button type="submit" class="primary-button start-practice">进入对局 →</button></form></dialog>
+<dialog id="rulesDialog"><button class="close" id="closeRules" aria-label="关闭">×</button><div class="eyebrow">HOW TO PLAY</div><h2>一盘棋，两种智慧。</h2><p>使用 9 × 10 象棋棋盘，按传统象棋布局，红方先行。每回合选择移动一枚象棋，或在空交叉点放一枚己方围棋。</p><ol><li><strong>阵营与气</strong>：红方与白子为一方，象棋外圈为白色；黑方与黑子为一方，象棋外圈为黑色。上下左右紧邻的己方棋子组成棋块，共享相邻空交叉点作为“气”。斜向不连接，河两岸相邻交叉点照常连接。</li><li><strong>走棋与吃子</strong>：遵守象棋走法、九宫、象不过河、兵卒过河、蹩马腿、塞象眼及炮隔一子吃子的规则。双方的象棋、围棋都可作炮架；炮吃子时须与目标同行或同列，中间恰好隔一枚棋子。围棋可阻挡，也能被象棋直接吃掉。围棋落下后不能移动。未选中象棋时点击空位落围棋；选中象棋后点击合法点走棋，点击非法点取消选择。</li><li><strong>提子顺序</strong>：先完成移动或落子与直接吃子，再同时移除所有对方无气棋块。若已捕获对方将帅，立即获胜；否则若己方有无气棋块，则该步为自杀禁手。不得重复本局任何已出现的棋盘局面。</li><li><strong>获胜</strong>：直接吃掉或围死对方将帅即胜。采用捕获将帅制，不设“被将军必须应将”的限制；将帅照面时可以飞将吃对方。无合法行动判负。</li><li><strong>对局模式</strong>：联机大厅最多 5 个房间，每间 2 人。双方准备后随机分配红黑方；断线保留座位 30 秒，期间暂停，超时或主动退出判负。结束后双方可再次准备。PVP 为本机同屏双人；PVE 可在主菜单的练习设置中选择红黑方及三档难度，红方先行；棋盘始终按你的阵营朝向显示。同屏双人随当前行棋方翻转。电脑优先捕获将帅、处理一步败局，再按难度限时多层搜索。将军提示同时涵盖直接吃将和围死将帅的威胁，但不强制应将。切换模式会重新开始。</li></ol><p class="rule-foot">这是融合规则的明确约定，并非传统象棋或围棋的完整竞赛规则。</p></dialog>
 <dialog id="leaveDialog"><h2>退出当前房间？</h2><p>对局中退出将判负。房间没有玩家后自动销毁。</p><div class="controls"><button id="cancelLeave">继续对局</button><button id="confirmLeave">退出房间</button></div></dialog><dialog id="confirmDialog"><h2>重新开始这局棋？</h2><p>当前对局将被清空。</p><div class="controls"><button id="cancelReset">继续对局</button><button id="confirmReset">开始新局</button></div></dialog>
 <script type="module" src="app.js"></script></body></html>
