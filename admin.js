@@ -49,10 +49,10 @@ async function refresh(){
   }else if(view==='settings'){
     const data=await api('admin/settings');
     if(ticket!==epoch)return;
-    $('registration').checked=data.settings.registrationOpen;
-    $('guestLogin').checked=data.settings.guestLoginOpen;
-    $('maxRooms').value=data.settings.maxRooms;
-    $('serverStatus').textContent=`当前 ${data.rooms} 间房 · ${data.sessions} 个会话（含离线保留会话）`;
+    if($('registration'))$('registration').checked=Boolean(data.settings.registrationOpen);
+    if($('guestLogin'))$('guestLogin').checked=Boolean(data.settings.guestLoginOpen);
+    if($('maxRooms'))$('maxRooms').value=data.settings.maxRooms;
+    if($('serverStatus'))$('serverStatus').textContent=`当前 ${data.rooms} 间房 · ${data.sessions} 个会话（含离线保留会话）`;
   }else if(view==='records'){
     recordOffset=0;
     $('recordList').replaceChildren();
@@ -263,12 +263,17 @@ $('moreAuditLogs').onclick=()=>guarded(async()=>{$('moreAuditLogs').disabled=tru
 $('settingsForm').onsubmit=e=>{
   e.preventDefault();
   guarded(async()=>{
-    const b=e.submitter;b.disabled=true;
+    const b=e.submitter;if(b)b.disabled=true;
     try{
-      await api('admin/settings',{registrationOpen:$('registration').checked,guestLoginOpen:$('guestLogin').checked,maxRooms:Number($('maxRooms').value)});
+      const payload={
+        registrationOpen: Boolean($('registration')?.checked),
+        guestLoginOpen: Boolean($('guestLogin')?.checked),
+        maxRooms: Math.min(100, Math.max(1, Math.floor(Number($('maxRooms')?.value || 5))))
+      };
+      await api('admin/settings',payload);
       message('服务器设置已保存并立即生效。');
       await refresh();
-    }finally{b.disabled=false;}
+    }finally{if(b)b.disabled=false;}
   });
 };
 

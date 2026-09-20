@@ -108,7 +108,7 @@ ADMIN_AVATAR=帥
       if (eq > 0) {
         const k = trimmed.slice(0, eq).trim(), v = trimmed.slice(eq + 1).trim();
         if (k === 'PORT' && process.env.PORT) continue;
-        process.env[k] = v;
+        if (process.env[k] === undefined) process.env[k] = v;
       }
     }
   } catch {}
@@ -176,7 +176,9 @@ export function createGameServer({ lobby = new Lobby(), userStore = new UserStor
       }
 
       if (url.pathname.startsWith('/api/')) {
-        const expected = process.env.PUBLIC_ORIGIN || `http://${req.headers.host}`;
+        const hostHeader = req.headers.host || '';
+        const isHostLoopback = isLoopback(hostHeader.split(':')[0]);
+        const expected = (!isHostLoopback && process.env.PUBLIC_ORIGIN) ? process.env.PUBLIC_ORIGIN : `http://${hostHeader}`;
         if (req.headers.origin && !isSameOrigin(req.headers.origin, expected)) {
           throw new LobbyError('不允许跨站访问。', 403);
         }
@@ -247,6 +249,12 @@ export function createGameServer({ lobby = new Lobby(), userStore = new UserStor
           if (existingToken) {
             const verified = userStore.verifySession(existingToken);
             if (verified && !verified.banned) {
+              if (verified.user.type === 'guest' && !userStore.settings.guestLoginOpen) {
+                userStore.deleteSession(existingToken);
+                clearCookie(res, 'xq_session');
+                clearCookie(res, 'xq_csrf');
+                throw new LobbyError('服务器暂未开放游客登录。', 403);
+              }
               let s = lobby.sessions.get(existingToken);
               if (!s) s = lobby.createSession(verified.user, existingToken);
               s.user = verified.user;
@@ -263,7 +271,11 @@ export function createGameServer({ lobby = new Lobby(), userStore = new UserStor
           }
 
           // Otherwise establish guest
-          if (!userStore.settings.guestLoginOpen) throw new LobbyError('服务器暂未开放游客登录。', 403);
+          if (!userStore.settings.guestLoginOpen) {
+            clearCookie(res, 'xq_session');
+            clearCookie(res, 'xq_csrf');
+            throw new LobbyError('服务器暂未开放游客登录。', 403);
+          }
           const tokenInput = body.guestToken || body.deviceToken || cookies['xq_guest'];
           const user = userStore.getOrCreateGuest(tokenInput);
           const sess = userStore.createSession(user.id, { ip: clientIp, userAgent: req.headers['user-agent'] });
@@ -307,10 +319,20 @@ export function createGameServer({ lobby = new Lobby(), userStore = new UserStor
           }
         }
 
-        if (!sessionVerification) {
+        if (!sessionVerification || (sessionVerification.user.type === 'guest' && !userStore.settings.guestLoginOpen)) {
+          if (sessionVerification?.user?.type === 'guest' && !userStore.settings.guestLoginOpen) {
+            userStore.deleteSession(token);
+            if (s) {
+              lobby.disconnect(s);
+              lobby.sessions.delete(token);
+            }
+          }
           if (isCookieAuth) {
             clearCookie(res, 'xq_session');
             clearCookie(res, 'xq_csrf');
+          }
+          if (sessionVerification?.user?.type === 'guest' && !userStore.settings.guestLoginOpen) {
+            throw new LobbyError('服务器暂未开放游客登录。', 403);
           }
           throw new LobbyError('身份已过期，请重新登录。', 401);
         }
@@ -421,6 +443,20 @@ export function createGameServer({ lobby = new Lobby(), userStore = new UserStor
           if (req.method === 'POST') {
             userStore.updateSettings(await readJson(req), s.user, clientIp);
             lobby.maxRooms = userStore.settings.maxRooms;
+            if (!userStore.settings.guestLoginOpen) {
+              for (const [t, sess] of lobby.sessions.entries()) {
+                if (sess.user?.type === 'guest') {
+                  for (const stream of sess.streams) {
+                    try {
+                      stream.write(`event: error\ndata: ${JSON.stringify({ error: '服务器已关闭游客登录。' })}\n\n`);
+                      stream.end();
+                    } catch {}
+                  }
+                  lobby.disconnect(sess);
+                  lobby.sessions.delete(t);
+                }
+              }
+            }
             lobby.changed();
           } else if (req.method !== 'GET') throw new LobbyError('请求方法无效。', 405);
           json(res, 200, { settings: userStore.settings, rooms: lobby.rooms.size, sessions: lobby.sessions.size });

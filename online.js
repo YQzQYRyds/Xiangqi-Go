@@ -86,7 +86,16 @@ export class OnlineConnection {
           signal: this.controller.signal
         });
         const data = await res.json();
-        if (!res.ok) throw Error(data.error || '会话建立失败');
+        if (!res.ok) {
+          if (res.status === 403) {
+            this.token = null;
+            clearToken();
+            clearGuestToken();
+            this.onStatus(false, data.error || '服务器暂未开放游客登录。');
+            return;
+          }
+          throw Error(data.error || '会话建立失败');
+        }
         this.token = data.token;
         this.csrfToken = data.csrfToken || getCookie('xq_csrf');
         if (data.guestToken) {
@@ -104,11 +113,15 @@ export class OnlineConnection {
         signal: this.controller.signal
       });
 
-      if (res.status === 401) {
+      if (res.status === 401 || res.status === 403) {
         this.token = null;
         this.version = -1;
         clearToken();
-        throw Error('身份已过期，正在重建连接…');
+        clearGuestToken();
+        const msg = res.status === 403 ? '服务器暂未开放游客登录。' : '身份已过期，正在重建连接…';
+        this.onStatus(false, msg);
+        if (res.status === 403) return;
+        throw Error(msg);
       }
       if (!res.ok) throw Error('连接失败，正在重试…');
 
@@ -203,7 +216,10 @@ export class OnlineConnection {
       body: JSON.stringify({ guestToken })
     });
     const data = await res.json();
-    if (!res.ok) throw Error(data.error || '游客登录失败');
+    if (!res.ok) {
+      if (res.status === 403) clearGuestToken();
+      throw Error(data.error || '游客登录失败');
+    }
     this.token = data.token;
     this.csrfToken = data.csrfToken || getCookie('xq_csrf');
     if (data.guestToken) {
@@ -251,9 +267,10 @@ export class OnlineConnection {
       credentials: 'same-origin',
       headers: this.getHeaders()
     });
-    if (res.status === 401) {
+    if (res.status === 401 || res.status === 403) {
       this.token = null;
       clearToken();
+      if (res.status === 403) clearGuestToken();
       return null;
     }
     const data = await res.json();

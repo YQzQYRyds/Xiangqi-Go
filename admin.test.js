@@ -64,8 +64,9 @@ test('HTTP admin authorization, live capacity, registration gate and session rev
   assert.equal((await call('auth/register',{username:'不能注册',password:'password'})).status,403);
   assert.equal((await call('auth/guest',{})).status,403);
   assert.equal((await call('session',{},'')).status,403);
-  assert.equal((await call('session',{},guestLogin.data.token)).status,200);
-  assert.equal((await call('user/profile',undefined,guestLogin.data.token)).status,200);
+  assert.equal((await call('session',{},guestLogin.data.token)).status,403);
+  assert.equal((await call('user/profile',undefined,guestLogin.data.token)).status,401);
+  assert.equal((await call('user/profile',undefined,session.token)).status,200);
   assert.equal((await call('admin/account',{action:'create',type:'registered',username:'后台创建',password:'password'})).status,200);
   assert.equal((await call('admin/settings',{registrationOpen:true,guestLoginOpen:true,maxRooms:0})).status,400);assert.equal(lobby.maxRooms,1);
   session.connected=true;lobby.command(session,{type:'create',requestId:'one'});

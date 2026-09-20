@@ -247,6 +247,9 @@ export class UserStore {
     this.userCache = new Map();
     this.initDb(filePath);
     this.initAdmin({ force: false });
+    if (!this.settings.guestLoginOpen) {
+      try { this.stmtDeleteGuestSessions.run(); } catch {}
+    }
   }
 
   initDb(filePath) {
@@ -451,6 +454,9 @@ export class UserStore {
     this.stmtDeleteUserSessions = this.db.prepare(`
       DELETE FROM sessions WHERE user_id = ?
     `);
+    this.stmtDeleteGuestSessions = this.db.prepare(`
+      DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE type = 'guest')
+    `);
     this.stmtCleanExpiredSessions = this.db.prepare(`
       DELETE FROM sessions WHERE expires_at <= ? OR idle_expires_at <= ?
     `);
@@ -643,7 +649,8 @@ export class UserStore {
   initAdmin({ force = false } = {}) {
     const adminUsername = process.env.ADMIN_USERNAME || 'admin';
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-    const adminAvatar = AVATARS.includes(process.env.ADMIN_AVATAR) ? process.env.ADMIN_AVATAR : '帥';
+    const envAvatar = process.env.ADMIN_AVATAR;
+    const adminAvatar = isValidAvatar(envAvatar) ? envAvatar : (AVATARS.includes(envAvatar) ? envAvatar : '帥');
 
     if (process.env.NODE_ENV === 'production' && (adminPassword === 'admin123' || !adminPassword)) {
       throw new Error('生产环境下禁止使用默认管理员密码（admin123），请在环境变量中显式配置高强度 ADMIN_PASSWORD。');
@@ -666,8 +673,12 @@ export class UserStore {
     this.db.exec('BEGIN TRANSACTION');
     try {
       if (existingAdmin) {
-        this.stmtUpdateUserProfile.run(adminUsername, adminAvatar, now, existingAdmin.id);
+        const avatarToKeep = existingAdmin.avatar || adminAvatar;
+        this.stmtUpdateUserProfile.run(adminUsername, avatarToKeep, now, existingAdmin.id);
         this.stmtInsertOrReplaceCredential.run(existingAdmin.id, hash, salt, 'scrypt_v1', JSON.stringify(DEFAULT_COST), now);
+        existingAdmin.username = adminUsername;
+        existingAdmin.avatar = avatarToKeep;
+        existingAdmin.updatedAt = now;
       } else {
         this.stmtInsertUser.run(
           '10000001',
@@ -1258,6 +1269,11 @@ export class UserStore {
       return null;
     }
 
+    if (user.type === 'guest' && !this.settings.guestLoginOpen) {
+      this.stmtDeleteSession.run(tokenHash);
+      return null;
+    }
+
     const newIdleExpires = now + 7 * 24 * 3600 * 1000;
     this.stmtUpdateSessionTouch.run(now, newIdleExpires, tokenHash);
 
@@ -1497,15 +1513,56 @@ export class UserStore {
     return { logs, total };
   }
 
-  updateSettings(data, actor = null, ip = null) {
-    if (typeof data.registrationOpen !== 'boolean' || typeof data.guestLoginOpen !== 'boolean' || !Number.isInteger(data.maxRooms) || data.maxRooms < 1 || data.maxRooms > 100) {
-      throw new Error('房间上限须为 1–100 的整数，注册与游客登录开关须为布尔值。');
+  updateSettings(data = {}, actor = null, ip = null) {
+    if (!data || typeof data !== 'object') {
+      throw new Error('无效的设置参数。');
     }
+
+    const current = this.settings;
+
+    let regOpen = current.registrationOpen;
+    if (data.registrationOpen !== undefined) {
+      if (typeof data.registrationOpen === 'boolean') {
+        regOpen = data.registrationOpen;
+      } else if (data.registrationOpen === 'true' || data.registrationOpen === '1' || data.registrationOpen === 1) {
+        regOpen = true;
+      } else if (data.registrationOpen === 'false' || data.registrationOpen === '0' || data.registrationOpen === 0) {
+        regOpen = false;
+      } else {
+        throw new Error('房间上限须为 1–100 的整数，注册与游客登录开关须为布尔值。');
+      }
+    }
+
+    let guestOpen = current.guestLoginOpen;
+    if (data.guestLoginOpen !== undefined) {
+      if (typeof data.guestLoginOpen === 'boolean') {
+        guestOpen = data.guestLoginOpen;
+      } else if (data.guestLoginOpen === 'true' || data.guestLoginOpen === '1' || data.guestLoginOpen === 1) {
+        guestOpen = true;
+      } else if (data.guestLoginOpen === 'false' || data.guestLoginOpen === '0' || data.guestLoginOpen === 0) {
+        guestOpen = false;
+      } else {
+        throw new Error('房间上限须为 1–100 的整数，注册与游客登录开关须为布尔值。');
+      }
+    }
+
+    let maxRooms = current.maxRooms;
+    if (data.maxRooms !== undefined) {
+      const parsed = Number(data.maxRooms);
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+        throw new Error('房间上限须为 1–100 的整数，注册与游客登录开关须为布尔值。');
+      }
+      maxRooms = parsed;
+    }
+
     this.db.exec('BEGIN TRANSACTION');
     try {
-      this.stmtSetSetting.run('registration_open', data.registrationOpen ? 'true' : 'false');
-      this.stmtSetSetting.run('guest_login_open', data.guestLoginOpen ? 'true' : 'false');
-      this.stmtSetSetting.run('max_rooms', String(data.maxRooms));
+      this.stmtSetSetting.run('registration_open', regOpen ? 'true' : 'false');
+      this.stmtSetSetting.run('guest_login_open', guestOpen ? 'true' : 'false');
+      this.stmtSetSetting.run('max_rooms', String(maxRooms));
+      if (!guestOpen) {
+        this.stmtDeleteGuestSessions.run();
+      }
       if (actor) {
         this.logAudit({
           actorId: actor.id,
@@ -1513,9 +1570,9 @@ export class UserStore {
           targetId: 'server_settings',
           action: 'settings_update',
           details: {
-            registrationOpen: data.registrationOpen,
-            guestLoginOpen: data.guestLoginOpen,
-            maxRooms: data.maxRooms
+            registrationOpen: regOpen,
+            guestLoginOpen: guestOpen,
+            maxRooms: maxRooms
           },
           ip
         });
