@@ -50,6 +50,7 @@ async function refresh(){
     const data=await api('admin/settings');
     if(ticket!==epoch)return;
     $('registration').checked=data.settings.registrationOpen;
+    $('guestLogin').checked=data.settings.guestLoginOpen;
     $('maxRooms').value=data.settings.maxRooms;
     $('serverStatus').textContent=`当前 ${data.rooms} 间房 · ${data.sessions} 个会话（含离线保留会话）`;
   }else if(view==='records'){
@@ -264,7 +265,7 @@ $('settingsForm').onsubmit=e=>{
   guarded(async()=>{
     const b=e.submitter;b.disabled=true;
     try{
-      await api('admin/settings',{registrationOpen:$('registration').checked,maxRooms:Number($('maxRooms').value)});
+      await api('admin/settings',{registrationOpen:$('registration').checked,guestLoginOpen:$('guestLogin').checked,maxRooms:Number($('maxRooms').value)});
       message('服务器设置已保存并立即生效。');
       await refresh();
     }finally{b.disabled=false;}

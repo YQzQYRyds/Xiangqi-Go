@@ -216,6 +216,7 @@ export function createGameServer({ lobby = new Lobby(), userStore = new UserStor
         }
 
         if (url.pathname === '/api/auth/guest' && req.method === 'POST') {
+          if (!userStore.settings.guestLoginOpen) throw new LobbyError('服务器暂未开放游客登录。', 403);
           limit('ip:' + clientIp, 30);
           const { deviceToken, guestToken } = await readJson(req);
           const tokenInput = guestToken || deviceToken || cookies['xq_guest'];
@@ -262,6 +263,7 @@ export function createGameServer({ lobby = new Lobby(), userStore = new UserStor
           }
 
           // Otherwise establish guest
+          if (!userStore.settings.guestLoginOpen) throw new LobbyError('服务器暂未开放游客登录。', 403);
           const tokenInput = body.guestToken || body.deviceToken || cookies['xq_guest'];
           const user = userStore.getOrCreateGuest(tokenInput);
           const sess = userStore.createSession(user.id, { ip: clientIp, userAgent: req.headers['user-agent'] });

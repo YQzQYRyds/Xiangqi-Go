@@ -43,9 +43,9 @@ test('account lifecycle, permission boundaries, expiry, shared records and persi
   for(let i=0;i<25;i++)store.recordGame({id:'game'+i,startedAt:1,players:[{id:user.id,name:user.username,side:'r'},{id:guest.id,name:guest.username,side:'b'}],winner:i<5?'r':'b',records:[],reason:'测试'});
   store.recordGame({id:'game0',winner:'r'});
   assert.deepEqual(store.stats(user.id),{games:25,wins:5,winRate:.2,recentGames:20,recentWinRate:0});
-  store.updateSettings({registrationOpen:false,maxRooms:8});
+  store.updateSettings({registrationOpen:false,guestLoginOpen:false,maxRooms:8});
   const reloaded=new UserStore(file,path.join(dir,'no.env'));
-  assert.equal(reloaded.stats(user.id).games,25);assert.equal(reloaded.settings.maxRooms,8);
+  assert.equal(reloaded.stats(user.id).games,25);assert.equal(reloaded.settings.maxRooms,8);assert.equal(reloaded.settings.guestLoginOpen,false);
   assert.equal(JSON.stringify(store.listUsers()).includes('passwordHash'),false);
   store.manage(root,{action:'clearRecords',userId:user.id});assert.equal(store.stats(user.id).games,0);assert.equal(store.stats(guest.id).games,25);
   store.manage(root,{action:'delete',userId:guest.id});assert.equal(store.findUserById(guest.id),null);assert.equal(store.findUserByUsername('游客升级'),null);
@@ -58,10 +58,16 @@ test('HTTP admin authorization, live capacity, registration gate and session rev
   async function call(route,body,token=admin.token){const res=await fetch(base+'/api/'+route,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});return {status:res.status,data:await res.json()};}
   for(const route of ['admin/settings','admin/records','admin/users'])assert.equal((await call(route,undefined,session.token)).status,403);
   assert.equal((await call('admin/account',{action:'delete',userId:root.id},session.token)).status,403);
-  assert.equal((await call('admin/settings',{registrationOpen:false,maxRooms:1})).status,200);assert.equal(lobby.maxRooms,1);
+  const guestLogin=await call('auth/guest',{});
+  assert.equal(guestLogin.status,201);
+  assert.equal((await call('admin/settings',{registrationOpen:false,guestLoginOpen:false,maxRooms:1})).status,200);assert.equal(lobby.maxRooms,1);
   assert.equal((await call('auth/register',{username:'不能注册',password:'password'})).status,403);
+  assert.equal((await call('auth/guest',{})).status,403);
+  assert.equal((await call('session',{},'')).status,403);
+  assert.equal((await call('session',{},guestLogin.data.token)).status,200);
+  assert.equal((await call('user/profile',undefined,guestLogin.data.token)).status,200);
   assert.equal((await call('admin/account',{action:'create',type:'registered',username:'后台创建',password:'password'})).status,200);
-  assert.equal((await call('admin/settings',{registrationOpen:true,maxRooms:0})).status,400);assert.equal(lobby.maxRooms,1);
+  assert.equal((await call('admin/settings',{registrationOpen:true,guestLoginOpen:true,maxRooms:0})).status,400);assert.equal(lobby.maxRooms,1);
   session.connected=true;lobby.command(session,{type:'create',requestId:'one'});
   const other=lobby.createSession(store.getOrCreateGuest('other'));other.connected=true;
   assert.throws(()=>lobby.command(other,{type:'create',requestId:'two'}),/1 个房间/);
@@ -72,7 +78,8 @@ test('HTTP admin authorization, live capacity, registration gate and session rev
   user.banUntil=Date.now()-1;assert.equal((await call('user/profile',undefined,current.token)).status,200);
   const editor=store.register({username:'统计管理员',password:'password'});editor.role='admin';editor.permissions=['records'];const e=lobby.createSession(editor);
   assert.equal((await call('admin/records',undefined,e.token)).status,200);assert.equal((await call('admin/settings',undefined,e.token)).status,403);
-  assert.equal((await fetch(base+'/admin.html')).status,200);assert.equal((await fetch(base+'/users.json')).status,404);
+  const adminPage=await fetch(base+'/admin.html');assert.equal(adminPage.status,200);assert.match(await adminPage.text(),/id="guestLogin"[^>]*> 开放游客登录/);
+  assert.equal((await fetch(base+'/users.json')).status,404);
 });
 test('game capture and departure archive once including final move and both players',t=>{
   const {store}=fixture(t);const lobby=new Lobby({randomColor:()=>0});lobby.onGameFinished=g=>store.recordGame(g);

@@ -278,7 +278,7 @@ test('5. Data migration: JSON import, idempotency, backup and corrupt data rollb
         createdAt: 2000
       }
     ],
-    settings: { registrationOpen: false, maxRooms: 7 },
+    settings: { registrationOpen: false, guestLoginOpen: false, maxRooms: 7 },
     matches: [
       {
         id: 'm-1',
@@ -305,6 +305,7 @@ test('5. Data migration: JSON import, idempotency, backup and corrupt data rollb
   assert.equal(u.avatar, '弈'); // external http URL sanitized!
   assert.equal(store.settings.maxRooms, 7);
   assert.equal(store.settings.registrationOpen, false);
+  assert.equal(store.settings.guestLoginOpen, false);
   assert.equal(store.matches.length, 1);
   assert.equal(store.stats('12345678').wins, 1);
 

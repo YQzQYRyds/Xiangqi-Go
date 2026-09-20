@@ -120,7 +120,9 @@ export function migrateFromJson(jsonPath, db, { backup = (!jsonPath.includes('te
   }
 
   const userList = Array.isArray(data) ? data : (data.users || []);
-  const settingsData = Array.isArray(data) ? { registrationOpen: true, maxRooms: 5 } : (data.settings || {});
+  const settingsData = Array.isArray(data)
+    ? { registrationOpen: true, guestLoginOpen: true, maxRooms: 5 }
+    : (data.settings || {});
   const matchList = Array.isArray(data) ? [] : (data.matches || []);
 
   const now = Date.now();
@@ -198,8 +200,10 @@ export function migrateFromJson(jsonPath, db, { backup = (!jsonPath.includes('te
     }
 
     const regOpen = settingsData.registrationOpen !== false ? 'true' : 'false';
+    const guestLoginOpen = settingsData.guestLoginOpen !== false ? 'true' : 'false';
     const maxRooms = String(Number.isInteger(settingsData.maxRooms) ? settingsData.maxRooms : 5);
     db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('registration_open', ?)").run(regOpen);
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('guest_login_open', ?)").run(guestLoginOpen);
     db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('max_rooms', ?)").run(maxRooms);
 
     for (const m of matchList) {
@@ -1494,12 +1498,13 @@ export class UserStore {
   }
 
   updateSettings(data, actor = null, ip = null) {
-    if (typeof data.registrationOpen !== 'boolean' || !Number.isInteger(data.maxRooms) || data.maxRooms < 1 || data.maxRooms > 100) {
-      throw new Error('房间上限须为 1–100 的整数，注册开关须为布尔值。');
+    if (typeof data.registrationOpen !== 'boolean' || typeof data.guestLoginOpen !== 'boolean' || !Number.isInteger(data.maxRooms) || data.maxRooms < 1 || data.maxRooms > 100) {
+      throw new Error('房间上限须为 1–100 的整数，注册与游客登录开关须为布尔值。');
     }
     this.db.exec('BEGIN TRANSACTION');
     try {
       this.stmtSetSetting.run('registration_open', data.registrationOpen ? 'true' : 'false');
+      this.stmtSetSetting.run('guest_login_open', data.guestLoginOpen ? 'true' : 'false');
       this.stmtSetSetting.run('max_rooms', String(data.maxRooms));
       if (actor) {
         this.logAudit({
@@ -1507,7 +1512,11 @@ export class UserStore {
           actorName: actor.username,
           targetId: 'server_settings',
           action: 'settings_update',
-          details: { registrationOpen: data.registrationOpen, maxRooms: data.maxRooms },
+          details: {
+            registrationOpen: data.registrationOpen,
+            guestLoginOpen: data.guestLoginOpen,
+            maxRooms: data.maxRooms
+          },
           ip
         });
       }
@@ -1521,9 +1530,11 @@ export class UserStore {
 
   get settings() {
     const regRow = this.stmtGetSetting.get('registration_open');
+    const guestLoginRow = this.stmtGetSetting.get('guest_login_open');
     const maxRow = this.stmtGetSetting.get('max_rooms');
     return {
       registrationOpen: regRow ? regRow.value === 'true' : true,
+      guestLoginOpen: guestLoginRow ? guestLoginRow.value === 'true' : true,
       maxRooms: maxRow ? Number(maxRow.value) || 5 : 5
     };
   }
